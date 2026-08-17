@@ -27,7 +27,6 @@ from .utils.time_utils import (
 )
 from .utils.trade_log import log_trade, update_trade_outcomes
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -45,15 +44,12 @@ class DayState:
     long_placed: bool = False
     short_placed: bool = False
 
-    # Set when a proposal has been surfaced to the user.
-    # Prevents re-proposing the same direction on subsequent ticks.
+    # Prevent the same direction from being proposed repeatedly.
     long_proposed: bool = False
     short_proposed: bool = False
 
     session_closed: bool = False
     active_order_ids: List[str] = field(default_factory=list)
-
-    # Latest order details for dashboard display.
     last_orders: List[Dict] = field(default_factory=list)
 
 
@@ -109,6 +105,8 @@ class HelixAgent:
         self._states: Dict[str, DayState] = {}
 
         self._state_path = Path("state/helix_state.json")
+        self._proposals_path = Path("state/proposals.json")
+
         self._load_state()
 
     # ------------------------------------------------------------------ #
@@ -146,8 +144,7 @@ class HelixAgent:
                 )
             else:
                 logger.info(
-                    "Saved state is from a previous day "
-                    "- starting fresh"
+                    "Saved state is from a previous day - starting fresh"
                 )
 
         except Exception as exc:
@@ -189,6 +186,115 @@ class HelixAgent:
             logger.warning(
                 f"Could not save Helix state: {exc}"
             )
+
+    def _load_proposals(self) -> List[Dict]:
+        """Load dashboard proposals from disk."""
+
+        if not self._proposals_path.exists():
+            return []
+
+        try:
+            with self._proposals_path.open(
+                "r",
+                encoding="utf-8",
+            ) as file:
+                data = json.load(file)
+
+            if isinstance(data, list):
+                return data
+
+            logger.warning(
+                "proposals.json is not a list - ignoring contents"
+            )
+            return []
+
+        except Exception as exc:
+            logger.warning(
+                f"Could not load proposals: {exc}"
+            )
+            return []
+
+    def _save_proposals(self, proposals: List[Dict]):
+        """Save the complete proposal list to disk."""
+
+        try:
+            self._proposals_path.parent.mkdir(
+                parents=True,
+                exist_ok=True,
+            )
+
+            temp_path = self._proposals_path.with_suffix(".tmp")
+
+            with temp_path.open(
+                "w",
+                encoding="utf-8",
+            ) as file:
+                json.dump(
+                    proposals,
+                    file,
+                    indent=2,
+                )
+
+            temp_path.replace(self._proposals_path)
+
+        except Exception as exc:
+            logger.warning(
+                f"Could not save proposals: {exc}"
+            )
+
+    def _save_proposal(self, proposal: Dict):
+        """Save or replace a pending trade proposal."""
+
+        try:
+            proposals = self._load_proposals()
+
+            proposals = [
+                item
+                for item in proposals
+                if item.get("id") != proposal["id"]
+            ]
+
+            saved_proposal = dict(proposal)
+            saved_proposal["status"] = "pending"
+
+            proposals.append(saved_proposal)
+
+            self._save_proposals(proposals)
+
+            logger.info(
+                f"[{proposal['instrument']}] "
+                "Proposal saved for dashboard"
+            )
+
+        except Exception as exc:
+            logger.warning(
+                f"Could not save proposal: {exc}"
+            )
+
+    def _update_proposal_status(
+        self,
+        proposal_id: str,
+        status: str,
+        extra: Optional[Dict] = None,
+    ):
+        """Update the status of a proposal stored on disk."""
+
+        proposals = self._load_proposals()
+
+        changed = False
+
+        for proposal in proposals:
+            if proposal.get("id") == proposal_id:
+                proposal["status"] = status
+
+                if extra:
+                    proposal.update(extra)
+
+                changed = True
+                break
+
+        if changed:
+            self._save_proposals(proposals)
 
     # ------------------------------------------------------------------ #
     # Public API
@@ -316,7 +422,6 @@ class HelixAgent:
             )
             return
 
-        # Only trade when the user has pressed Go on dashboard.
         if self.state_reporter is not None:
             if not self.state_reporter.get().get(
                 "trading_enabled",
@@ -515,7 +620,6 @@ class HelixAgent:
         )
 
         units_abs = abs(int(units))
-
         entry_px = levels["entry"]
         sl_px = levels["stop_loss"]
         tp_px = levels["target"]
@@ -602,6 +706,8 @@ class HelixAgent:
                 proposal
             )
 
+        self._save_proposal(proposal)
+
         if direction == "long":
             state.long_proposed = True
 
@@ -629,10 +735,6 @@ class HelixAgent:
         self,
         proposal_id: str,
     ) -> Dict:
-        """
-        Called by the dashboard when the user approves
-        a pending trade.
-        """
 
         if (
             self.state_reporter is None
@@ -737,18 +839,10 @@ class HelixAgent:
                 "id": order_id,
                 "instrument": instrument,
                 "direction": direction,
-                "entry": (
-                    f"{proposal['entry']:.5f}"
-                ),
-                "stop_loss": (
-                    f"{proposal['stop_loss']:.5f}"
-                ),
-                "take_profit": (
-                    f"{proposal['take_profit']:.5f}"
-                ),
-                "risk": (
-                    f"{proposal['risk']:.5f}"
-                ),
+                "entry": f"{proposal['entry']:.5f}",
+                "stop_loss": f"{proposal['stop_loss']:.5f}",
+                "take_profit": f"{proposal['take_profit']:.5f}",
+                "risk": f"{proposal['risk']:.5f}",
                 "units": proposal["units"],
             }
         )
@@ -781,6 +875,17 @@ class HelixAgent:
                 f"Post-approval logging failed: {exc}"
             )
 
+        self._update_proposal_status(
+            proposal_id,
+            "placed",
+            {
+                "order_id": order_id,
+                "placed_at": now_london().strftime(
+                    "%Y-%m-%d %H:%M:%S"
+                ),
+            },
+        )
+
         logger.info(
             f"[{instrument}] APPROVED - "
             f"{direction.upper()} "
@@ -803,7 +908,6 @@ class HelixAgent:
         self,
         proposal_id: str,
     ) -> Dict:
-        """Called by dashboard when proposal is rejected."""
 
         if (
             self.state_reporter is None
@@ -826,6 +930,16 @@ class HelixAgent:
                 "ok": False,
                 "error": "Proposal not found",
             }
+
+        self._update_proposal_status(
+            proposal_id,
+            "rejected",
+            {
+                "rejected_at": now_london().strftime(
+                    "%Y-%m-%d %H:%M:%S"
+                ),
+            },
+        )
 
         logger.info(
             f"[{proposal['instrument']}] "
@@ -918,24 +1032,12 @@ class HelixAgent:
                         "ib_ready": state.ib_ready,
                         "daily_atr": state.daily_atr,
                         "ema": state.ema,
-                        "trades_today": (
-                            state.trades_today
-                        ),
-                        "long_placed": (
-                            state.long_placed
-                        ),
-                        "short_placed": (
-                            state.short_placed
-                        ),
-                        "long_proposed": (
-                            state.long_proposed
-                        ),
-                        "short_proposed": (
-                            state.short_proposed
-                        ),
-                        "session_closed": (
-                            state.session_closed
-                        ),
+                        "trades_today": state.trades_today,
+                        "long_placed": state.long_placed,
+                        "short_placed": state.short_placed,
+                        "long_proposed": state.long_proposed,
+                        "short_proposed": state.short_proposed,
+                        "session_closed": state.session_closed,
                     }
 
                     all_orders.extend(
@@ -957,7 +1059,6 @@ class HelixAgent:
                 logger.warning(
                     f"P&L fetch failed: {exc}"
                 )
-
                 pnl_days = []
 
             try:
@@ -999,9 +1100,7 @@ class HelixAgent:
                     "risk_percent": (
                         self.config.risk_percent
                     ),
-                    "instruments": (
-                        instruments_state
-                    ),
+                    "instruments": instruments_state,
                     "orders": all_orders,
                     "pnl_days": pnl_days,
                 }

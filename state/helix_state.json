@@ -1,0 +1,50 @@
+{
+  "EUR_USD": {
+    "date": "2026-08-17",
+    "ib_high": 1.15894,
+    "ib_low": 1.15828,
+    "ib_ready": true,
+    "daily_atr": 0.005172383356690196,
+    "ema": 1.1569503126554503,
+    "trades_today": 0,
+    "long_placed": false,
+    "short_placed": false,
+    "long_proposed": true,
+    "short_proposed": false,
+    "session_closed": false,
+    "active_order_ids": [],
+    "last_orders": []
+  },
+  "GBP_USD": {
+    "date": "2026-08-17",
+    "ib_high": 1.35586,
+    "ib_low": 1.35496,
+    "ib_ready": true,
+    "daily_atr": 0.006256711914253417,
+    "ema": 1.3533634736878264,
+    "trades_today": 0,
+    "long_placed": false,
+    "short_placed": false,
+    "long_proposed": true,
+    "short_proposed": false,
+    "session_closed": false,
+    "active_order_ids": [],
+    "last_orders": []
+  },
+  "USD_JPY": {
+    "date": "2026-08-17",
+    "ib_high": 159.125,
+    "ib_low": 158.98,
+    "ib_ready": true,
+    "daily_atr": 1.270214711105701,
+    "ema": 159.2149291549184,
+    "trades_today": 0,
+    "long_placed": false,
+    "short_placed": false,
+    "long_proposed": false,
+    "short_proposed": false,
+    "session_closed": false,
+    "active_order_ids": [],
+    "last_orders": []
+  }
+}

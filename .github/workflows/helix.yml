@@ -4,7 +4,15 @@ on:
   workflow_dispatch:
 
   schedule:
-    - cron: "0,30 * * * 1-5"
+    - cron: "0,30 6-18 * * 1-5"
+      timezone: "Europe/London"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: helix-fx
+  cancel-in-progress: false
 
 jobs:
   helix:
@@ -14,6 +22,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v7
@@ -23,14 +33,6 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Restore Helix state
-        uses: actions/cache/restore@v4
-        with:
-          path: state/helix_state.json
-          key: helix-state-${{ github.run_id }}
-          restore-keys: |
-            helix-state-
-
       - name: Run Helix
         env:
           OANDA_ACCOUNT_ID: ${{ secrets.OANDA_ACCOUNT_ID }}
@@ -38,9 +40,21 @@ jobs:
           OANDA_ENVIRONMENT: practice
         run: python main.py --mode practice --once
 
-      - name: Save Helix state
+      - name: Save Helix state to GitHub
         if: always()
-        uses: actions/cache/save@v4
-        with:
-          path: state/helix_state.json
-          key: helix-state-${{ github.run_id }}
+        run: |
+          git config user.name "helix-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add state/helix_state.json state/proposals.json
+
+          if git diff --cached --quiet; then
+            echo "No Helix state changes to commit"
+            exit 0
+          fi
+
+          git commit -m "Update Helix trading state"
+
+          git pull --rebase origin main
+
+          git push origin main
