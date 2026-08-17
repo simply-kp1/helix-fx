@@ -1,0 +1,25 @@
+broker:
+  name: oanda
+  account_id: "${OANDA_ACCOUNT_ID}"
+  api_key: "${OANDA_API_KEY}"
+  environment: "${OANDA_ENVIRONMENT}"
+
+trading:
+  instruments:
+    - EUR_USD
+    - GBP_USD
+    - USD_JPY
+  risk_percent: 1.0          # % of account balance to risk per trade
+  max_trades_per_day: 3
+
+strategy:
+  ema_period: 100
+  atr_period: 14
+  atr_buffer_pct: 0.05       # 5% of daily ATR as SL buffer
+  min_rr: 1.5                # Minimum risk-to-reward ratio
+
+session:
+  ib_start_hour: 6           # 06:00 UK time
+  ib_end_hour: 7             # 07:00 UK time (IB complete)
+  session_end_hour: 18       # 18:00 UK time (cancel pending orders)
+  timezone: "Europe/London"

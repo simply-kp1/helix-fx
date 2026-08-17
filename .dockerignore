@@ -1,0 +1,36 @@
+# Local runtime state — lives on Fly volume, not in the image
+logs/
+backtest_cache/
+trades.csv
+*.log
+
+# Secrets — set via `fly secrets set`
+.env
+.env.*
+!.env.example
+
+# Python bytecode & caches
+__pycache__/
+*.py[cod]
+*.pyc
+*.pyo
+*.egg-info/
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Git & docs that don't belong in the image
+.git/
+.gitignore
+.github/
+*.md
+!README.md

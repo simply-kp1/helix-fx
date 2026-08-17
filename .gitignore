@@ -1,0 +1,39 @@
+# ─── SECRETS — never commit ─────────────────────────────────────────
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+credentials.json
+
+# ─── Runtime state (lives on Fly volume / local disk only) ──────────
+logs/
+backtest_cache/
+trades.csv
+*.log
+backtest_results.json
+
+# ─── Python ─────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.egg-info/
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+build/
+dist/
+
+# ─── IDE / OS ───────────────────────────────────────────────────────
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# ─── Fly.io local state ─────────────────────────────────────────────
+.fly/

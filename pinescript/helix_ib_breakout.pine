@@ -1,0 +1,182 @@
+// ═══════════════════════════════════════════════════════════════════════
+//   HELIX FX — Initial Balance Breakout (M30, London Session)
+//   Mirror of the live Python agent in helix/agent.py
+//
+//   Strategy:
+//     • Initial Balance (IB) = the price range of the two M30 candles at
+//       06:00 and 06:30 London time.
+//     • After 07:00 London, if an M30 candle CLOSES above IB High → long,
+//       or CLOSES below IB Low → short.
+//     • Long stop entry at IB High, SL at IB Low − (dailyATR × 5%),
+//       TP at Entry + (risk × min R:R).
+//     • Short stop entry at IB Low, SL at IB High + (dailyATR × 5%),
+//       TP at Entry − (risk × min R:R).
+//     • EMA-100 filter: skip trade if EMA sits between entry and target
+//       (acts as resistance/support blocking the path to target).
+//     • Position sizing: risk % of equity per trade, based on stop distance.
+//     • Max 3 trades / day / instrument (one long + one short).
+//     • Pending orders that do not fill by 18:00 London are cancelled.
+//     • Filled trades run to SL, TP, or (implicit) TradingView broker close.
+//
+//   Recommended chart: any of EURUSD, GBPUSD, USDJPY on the 30-minute
+//   timeframe.  Adjust the "Session Timezone" input if your local
+//   TradingView clock is not already Europe/London.
+// ═══════════════════════════════════════════════════════════════════════
+
+//@version=5
+strategy("HELIX FX — IB Breakout",
+     shorttitle          = "HELIX-IB",
+     overlay             = true,
+     initial_capital     = 10000,
+     default_qty_type    = strategy.fixed,
+     default_qty_value   = 1,
+     currency            = currency.USD,
+     pyramiding          = 0,
+     calc_on_every_tick  = false,
+     process_orders_on_close = true,
+     commission_type     = strategy.commission.cash_per_contract,
+     commission_value    = 0.00007,   // ~0.7 pip average round-trip cost
+     slippage            = 1)          // 1 tick default slippage
+
+// ─────────── Inputs ─────────────────────────────────────────────────────
+grp_strat = "Strategy"
+emaLen        = input.int   (100,  "EMA Period",              minval = 5,  group = grp_strat)
+atrLen        = input.int   (14,   "Daily ATR Period",        minval = 5,  group = grp_strat)
+atrBufferPct  = input.float (0.05, "ATR SL Buffer (fraction)", step = 0.01, minval = 0.0, maxval = 1.0, group = grp_strat)
+minRR         = input.float (1.5,  "Minimum R : R",           step  = 0.1, minval = 0.5, group = grp_strat)
+maxTradesDay  = input.int   (3,    "Max Trades per Day",      minval = 1,  maxval = 10, group = grp_strat)
+
+grp_risk = "Risk"
+riskPct       = input.float (1.0,  "Risk % of Equity per Trade", step = 0.1, minval = 0.1, maxval = 10.0, group = grp_risk)
+
+grp_sess = "Session (London Time)"
+ibStartHour   = input.int   (6,    "IB Start Hour",   minval = 0, maxval = 23, group = grp_sess)
+ibEndHour     = input.int   (7,    "IB End Hour",     minval = 0, maxval = 23, group = grp_sess)
+sessionEndH   = input.int   (18,   "Session End Hour", minval = 0, maxval = 23, group = grp_sess)
+tz            = input.string("Europe/London", "Session Timezone", group = grp_sess)
+
+grp_viz = "Visuals"
+showIB        = input.bool  (true,  "Show IB High/Low lines", group = grp_viz)
+showEMA       = input.bool  (true,  "Show EMA-100",           group = grp_viz)
+showTargets   = input.bool  (true,  "Show Entry / SL / TP lines when a trade is live", group = grp_viz)
+
+// ─────────── London time helpers ────────────────────────────────────────
+h = hour  (time, tz)
+m = minute(time, tz)
+
+// The two IB M30 bars are the ones whose OPEN times are 06:00 and 06:30.
+inIBBar       = (h == ibStartHour)
+afterIB       = (h >= ibEndHour) and (h < sessionEndH)
+sessionEnded  = (h >= sessionEndH)
+
+// ─────────── Daily ATR (Wilder), mirrors the Python calc ────────────────
+// Using the previous COMPLETED daily bar so we don't peek at the current day.
+dailyATR = request.security(syminfo.tickerid, "D",
+     ta.atr(atrLen)[1],
+     lookahead = barmerge.lookahead_off,
+     gaps      = barmerge.gaps_off)
+
+// ─────────── EMA-100 on the working timeframe (M30) ─────────────────────
+ema100 = ta.ema(close, emaLen)
+
+// ─────────── Per-day state ─────────────────────────────────────────────
+var float ibHigh      = na
+var float ibLow       = na
+var bool  ibReady     = false
+var int   tradesToday = 0
+var bool  longTaken   = false
+var bool  shortTaken  = false
+
+// Reset at the first bar of the IB window (i.e. the 06:00 bar of each day)
+newDay = inIBBar and not inIBBar[1]
+if newDay
+    ibHigh      := na
+    ibLow       := na
+    ibReady     := false
+    tradesToday := 0
+    longTaken   := false
+    shortTaken  := false
+
+// Accumulate the IB high/low during the two 06:xx bars
+if inIBBar
+    ibHigh := na(ibHigh) ? high : math.max(ibHigh, high)
+    ibLow  := na(ibLow)  ? low  : math.min(ibLow,  low)
+
+// IB is "ready" at the first bar after the IB window closes
+if afterIB and not ibReady
+    ibReady := true
+
+// ─────────── Level calculations ────────────────────────────────────────
+buffer     = na(dailyATR) ? na : dailyATR * atrBufferPct
+
+longEntry  = ibHigh
+longSL     = na(ibLow)  ? na : ibLow  - buffer
+longRisk   = na(longEntry) or na(longSL) ? na : longEntry - longSL
+longTP     = na(longRisk) ? na : longEntry + longRisk * minRR
+
+shortEntry = ibLow
+shortSL    = na(ibHigh) ? na : ibHigh + buffer
+shortRisk  = na(shortEntry) or na(shortSL) ? na : shortSL - shortEntry
+shortTP    = na(shortRisk) ? na : shortEntry - shortRisk * minRR
+
+// EMA filter: skip if EMA-100 sits between entry and target (blocks path)
+longEMAOK  = na(ema100) or not (longEntry  < ema100 and ema100 < longTP)
+shortEMAOK = na(ema100) or not (shortTP   < ema100 and ema100 < shortEntry)
+
+// ─────────── Signal detection (M30 close beyond IB) ────────────────────
+canScan   = ibReady and afterIB and not na(dailyATR) and dailyATR > 0
+signalLong  = canScan and not longTaken  and tradesToday < maxTradesDay and close > ibHigh
+signalShort = canScan and not shortTaken and tradesToday < maxTradesDay and close < ibLow
+
+// ─────────── Position sizing from risk % ───────────────────────────────
+// For pairs quoted in USD (EUR/USD, GBP/USD…): loss_usd = qty × stopDist
+// so qty  = riskAmount / stopDist.
+//
+// For USD-base pairs (USD/JPY, USD/CAD…): loss_usd = qty × stopDist / entry
+// so qty  = riskAmount × entry / stopDist.
+isUSDBase   = str.startswith(syminfo.ticker, "USD")
+riskAmount  = strategy.equity * riskPct / 100.0
+
+longQty     = na(longRisk) or longRisk <= 0 ? 0.0 :
+             isUSDBase ? math.floor(riskAmount * longEntry  / longRisk)
+                       : math.floor(riskAmount               / longRisk)
+
+shortQty    = na(shortRisk) or shortRisk <= 0 ? 0.0 :
+             isUSDBase ? math.floor(riskAmount * shortEntry / shortRisk)
+                       : math.floor(riskAmount               / shortRisk)
+
+// ─────────── Place / manage orders ─────────────────────────────────────
+// Long
+if signalLong and longEMAOK and longQty > 0
+    strategy.entry ("HELIX-L", strategy.long,  qty = longQty, stop = longEntry, comment = "IB Break Long")
+    strategy.exit  ("L-Exit", from_entry = "HELIX-L", limit = longTP, stop = longSL, comment_loss = "SL", comment_profit = "TP")
+    longTaken   := true
+    tradesToday := tradesToday + 1
+
+// Short
+if signalShort and shortEMAOK and shortQty > 0
+    strategy.entry ("HELIX-S", strategy.short, qty = shortQty, stop = shortEntry, comment = "IB Break Short")
+    strategy.exit  ("S-Exit", from_entry = "HELIX-S", limit = shortTP, stop = shortSL, comment_loss = "SL", comment_profit = "TP")
+    shortTaken  := true
+    tradesToday := tradesToday + 1
+
+// Cancel any un-filled stop orders at 18:00 London
+if sessionEnded
+    strategy.cancel("HELIX-L")
+    strategy.cancel("HELIX-S")
+
+// ─────────── Visuals ───────────────────────────────────────────────────
+plot(showIB  and ibReady ? ibHigh : na,
+     "IB High", color = color.new(#10D98A, 0), style = plot.style_linebr, linewidth = 2)
+plot(showIB  and ibReady ? ibLow  : na,
+     "IB Low",  color = color.new(#F43F5E, 0), style = plot.style_linebr, linewidth = 2)
+plot(showEMA ? ema100 : na,
+     "EMA " + str.tostring(emaLen), color = color.new(#00C8FF, 0), linewidth = 1)
+
+// Trade level markers while a position is live
+plot(showTargets and strategy.position_size != 0 ? strategy.position_avg_price : na,
+     "Entry", color = color.new(color.gray, 0), style = plot.style_linebr, linewidth = 1)
+
+// Background tint during the IB and trading windows
+bgcolor(inIBBar   ? color.new(color.yellow, 92) : na, title = "IB Window")
+bgcolor(afterIB   ? color.new(color.aqua,   96) : na, title = "Trading Window")
