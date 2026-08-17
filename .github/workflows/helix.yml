@@ -3,9 +3,12 @@ name: Helix FX
 on:
   workflow_dispatch:
 
-  schedule:
-    - cron: "0,30 6-18 * * 1-5"
-      timezone: "Europe/London"
+schedule:
+  - cron: "0,30 6-17 * * 1-5"
+    timezone: "Europe/London"
+
+  - cron: "0 18 * * 1-5"
+    timezone: "Europe/London"
 
 permissions:
   contents: write
