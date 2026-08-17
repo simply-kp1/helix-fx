@@ -13,19 +13,34 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: "3.12"
 
       - name: Install dependencies
         run: pip install -r requirements.txt
 
+      - name: Restore Helix state
+        uses: actions/cache/restore@v4
+        with:
+          path: state/helix_state.json
+          key: helix-state-${{ github.run_id }}
+          restore-keys: |
+            helix-state-
+
       - name: Run Helix
         env:
           OANDA_ACCOUNT_ID: ${{ secrets.OANDA_ACCOUNT_ID }}
           OANDA_API_KEY: ${{ secrets.OANDA_API_KEY }}
           OANDA_ENVIRONMENT: practice
-        run: python main.py --once
+        run: python main.py --mode practice --once
+
+      - name: Save Helix state
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: state/helix_state.json
+          key: helix-state-${{ github.run_id }}
