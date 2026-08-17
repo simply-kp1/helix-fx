@@ -1,0 +1,31 @@
+name: Helix FX
+
+on:
+  workflow_dispatch:
+
+  schedule:
+    - cron: "0,30 * * * 1-5"
+
+jobs:
+  helix:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run Helix
+        env:
+          OANDA_ACCOUNT_ID: ${{ secrets.OANDA_ACCOUNT_ID }}
+          OANDA_API_KEY: ${{ secrets.OANDA_API_KEY }}
+          OANDA_ENVIRONMENT: practice
+        run: python main.py --once
