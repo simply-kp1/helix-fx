@@ -37,9 +37,9 @@ def main():
     
     parser.add_argument(
         "--mode",
-        choices=["live", "paper"],
-        default="paper",
-        help="Trading mode (default: paper — no real orders placed)",
+        choices=["live", "practice", "paper"],
+        default="practice",
+        help="Trading mode: paper, practice, or live (default: paper)",
     )
     parser.add_argument(
         "--config",

@@ -55,13 +55,21 @@ class HelixAgent:
         self.instruments = list(config.instruments)
         self.state_reporter = state_reporter  # dashboard.state module or None
 
-        if mode == "live":
+        if mode in ("live", "practice"):
+            environment = "live" if mode == "live" else "practice"
+
             self.client = OandaClient(
                 account_id=config.broker.account_id,
                 api_key=config.broker.api_key,
-                environment=config.broker.environment,
+                environment=environment,
             )
-            logger.warning("LIVE MODE ACTIVE — real orders will be placed")
+
+            if mode == "live":
+                logger.warning("LIVE MODE ACTIVE — real orders will be placed")
+            else:
+                logger.info(
+                    "PRACTICE MODE — using real OANDA market data and practice account"
+                )
         else:
             self.client = MockOandaClient()
             logger.info("Paper mode — no real orders will be placed")
