@@ -1,0 +1,9 @@
+{
+  "trading_enabled": false,
+  "daily_budget": null,
+  "account_balance": null,
+  "last_tick": null,
+  "max_trades": 3,
+  "risk_percent": 1.0,
+  "pnl_days": []
+}

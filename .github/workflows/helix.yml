@@ -46,7 +46,9 @@ jobs:
           git config user.name "helix-bot"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          git add state/helix_state.json state/proposals.json
+          git add state/helix_state.json
+          git add state/proposals.json
+          git add state/control.json
 
           if git diff --cached --quiet; then
             echo "No Helix state changes to commit"
