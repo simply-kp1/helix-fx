@@ -28,6 +28,13 @@ def setup_logging():
 
 def main():
     parser = argparse.ArgumentParser(description="Helix FX Trading Agent")
+    
+    parser.add_argument(
+    "--once",
+    action="store_true",
+    help="Run one Helix tick and exit",
+)
+    
     parser.add_argument(
         "--mode",
         choices=["live", "paper"],
@@ -66,8 +73,10 @@ def main():
 
     if args.instrument:
         agent.instruments = [args.instrument]
-
-    agent.run()
+    if args.once:
+        agent.tick()
+    else:
+        agent.run()
 
 
 if __name__ == "__main__":
