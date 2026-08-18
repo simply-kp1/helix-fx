@@ -551,6 +551,37 @@ def api_state():
     )
 
 
+@app.route(
+    "/api/refresh",
+    methods=["POST"],
+)
+def api_refresh():
+    """
+    Fire the Helix GitHub Actions workflow immediately so the dashboard
+    picks up a fresh tick without waiting for the next scheduled cron.
+    """
+    triggered = _trigger_helix()
+
+    if not triggered:
+        return jsonify(
+            {
+                "ok": False,
+                "error": (
+                    "Could not trigger the Helix workflow — "
+                    "check that GITHUB_TOKEN is set with "
+                    "workflow:write permission."
+                ),
+            }
+        ), 500
+
+    return jsonify(
+        {
+            "ok": True,
+            "workflow_triggered": True,
+        }
+    )
+
+
 # ---------------------------------------------------------------------
 # Start / stop trading
 # ---------------------------------------------------------------------

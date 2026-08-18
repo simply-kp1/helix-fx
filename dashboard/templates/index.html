@@ -126,6 +126,30 @@
       background: rgba(0,200,255,0.22); box-shadow: var(--glow-cyan); transform: translateY(-1px);
     }
 
+    .refresh-btn {
+      font-family: 'Orbitron', sans-serif; font-size: 10.5px; letter-spacing: 2px; font-weight: 700;
+      padding: 8px 18px; border-radius: 100px; text-decoration: none;
+      background: rgba(16,217,138,0.1); color: var(--green); border: 1px solid var(--green);
+      transition: all .2s; cursor: pointer;
+      display: inline-flex; align-items: center; gap: 8px;
+    }
+    .refresh-btn:hover:not(:disabled) {
+      background: rgba(16,217,138,0.22); box-shadow: var(--glow-grn); transform: translateY(-1px);
+    }
+    .refresh-btn:disabled {
+      opacity: .55; cursor: not-allowed; transform: none; box-shadow: none;
+    }
+    .refresh-btn .spin {
+      display: inline-block;
+      transition: transform .3s;
+    }
+    .refresh-btn.spinning .spin {
+      animation: refresh-spin 1s linear infinite;
+    }
+    @keyframes refresh-spin {
+      to { transform: rotate(360deg); }
+    }
+
     .pill {
       display: inline-flex; align-items: center; gap: 7px;
       padding: 7px 18px; border-radius: 100px;
@@ -525,6 +549,9 @@
         <span class="dot dot-green" id="env-dot"></span>
         <span id="env-text">PRACTICE ACCOUNT</span>
       </div>
+      <button id="refresh-btn" class="refresh-btn" onclick="refreshHelix()" title="Trigger the Helix agent to run one tick right now (bypasses the 30-min cron)">
+        <span class="spin">↻</span><span id="refresh-label">REFRESH</span>
+      </button>
       <a href="/backtest" target="_blank" class="backtest-btn">◈ BACK TEST RESULTS</a>
     </div>
 
@@ -1092,6 +1119,58 @@ function applyBudgetUI(tradingEnabled, dailyBudget) {
     input.disabled = false;
     status.textContent = 'Trading paused — set a budget and press Go';
   }
+}
+
+/* ── Manual refresh (dispatch Helix workflow) ────────────────────────── */
+const REFRESH_COOLDOWN_MS = 30000;
+let _refreshCooldownUntil = 0;
+
+async function refreshHelix() {
+  const btn = document.getElementById('refresh-btn');
+  const label = document.getElementById('refresh-label');
+  if (!btn || btn.disabled) return;
+
+  btn.disabled = true;
+  btn.classList.add('spinning');
+  label.textContent = 'TRIGGERING...';
+
+  try {
+    const r = await fetch('/api/refresh', { method: 'POST' });
+    const data = await r.json();
+    if (!data.ok) {
+      alert('Refresh failed: ' + (data.error || 'unknown error'));
+      resetRefreshButton();
+      return;
+    }
+    label.textContent = 'QUEUED · ~1 MIN';
+    _refreshCooldownUntil = Date.now() + REFRESH_COOLDOWN_MS;
+    tickRefreshCooldown();
+  } catch (e) {
+    alert('Network error triggering refresh');
+    resetRefreshButton();
+  }
+}
+
+function tickRefreshCooldown() {
+  const btn = document.getElementById('refresh-btn');
+  const label = document.getElementById('refresh-label');
+  if (!btn) return;
+  const remaining = Math.max(0, Math.ceil((_refreshCooldownUntil - Date.now()) / 1000));
+  if (remaining <= 0) {
+    resetRefreshButton();
+    return;
+  }
+  label.textContent = `WAIT ${remaining}s`;
+  setTimeout(tickRefreshCooldown, 250);
+}
+
+function resetRefreshButton() {
+  const btn = document.getElementById('refresh-btn');
+  const label = document.getElementById('refresh-label');
+  if (!btn) return;
+  btn.disabled = false;
+  btn.classList.remove('spinning');
+  label.textContent = 'REFRESH';
 }
 
 /* ── Polling ─────────────────────────────────────────────────────────── */
