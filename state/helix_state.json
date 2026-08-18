@@ -6,14 +6,28 @@
     "ib_ready": true,
     "daily_atr": 0.005099522639907648,
     "ema": 1.15736755588826,
-    "trades_today": 0,
-    "long_placed": false,
+    "trades_today": 1,
+    "long_placed": true,
     "short_placed": false,
     "long_proposed": true,
     "short_proposed": false,
     "session_closed": false,
-    "active_order_ids": [],
-    "last_orders": []
+    "active_order_ids": [
+      "173"
+    ],
+    "last_orders": [
+      {
+        "id": "173",
+        "instrument": "EUR_USD",
+        "direction": "long",
+        "entry": "1.15743",
+        "stop_loss": "1.15669",
+        "take_profit": "1.15855",
+        "risk": "0.00074",
+        "units": 6711,
+        "status": "pending"
+      }
+    ]
   },
   "GBP_USD": {
     "date": "2026-08-18",
@@ -51,7 +65,7 @@
     "ib_low": 159.622,
     "ib_ready": true,
     "daily_atr": 1.2749078203490871,
-    "ema": 159.40765013008257,
+    "ema": 159.41332282575945,
     "trades_today": 0,
     "long_placed": false,
     "short_placed": false,

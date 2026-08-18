@@ -19,7 +19,9 @@
     "proposed_at": "2026-08-18 10:44:54",
     "gtd_time": "2026-08-18T17:00:00.000000000Z",
     "daily_budget": 500.0,
-    "status": "approved"
+    "status": "placed",
+    "order_id": "173",
+    "placed_at": "2026-08-18 13:02:38"
   },
   {
     "id": "GBP_USD-short-2026-08-18",
