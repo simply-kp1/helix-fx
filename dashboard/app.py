@@ -272,13 +272,16 @@ def _write_json(
     return False
 
 
-def _trigger_helix() -> bool:
+def _trigger_helix_verbose():
     """
     Trigger the Helix GitHub Actions workflow immediately.
+
+    Returns (ok: bool, error: Optional[str]) so callers can surface
+    the real GitHub API error to the user when it fails.
     """
 
     if not GITHUB_TOKEN:
-        return False
+        return False, "GITHUB_TOKEN env var is not set on this deployment."
 
     url = (
         f"{GITHUB_API}/repos/"
@@ -290,31 +293,35 @@ def _trigger_helix() -> bool:
         response = requests.post(
             url,
             headers=_github_headers(),
-            json={
-                "ref": GITHUB_BRANCH,
-            },
+            json={"ref": GITHUB_BRANCH},
             timeout=15,
         )
 
         if response.status_code == 204:
-            return True
+            return True, None
 
+        # Surface the exact GitHub response — it usually tells you
+        # exactly which scope is missing (e.g. "Resource not accessible
+        # by personal access token" for missing workflow scope).
+        detail = f"HTTP {response.status_code}: {response.text[:400]}"
         app.logger.error(
-            "Could not trigger Helix workflow: "
-            "%s %s",
-            response.status_code,
-            response.text,
+            "Could not trigger Helix workflow: %s",
+            detail,
         )
-
-        return False
+        return False, detail
 
     except Exception as exc:
         app.logger.warning(
             "Could not trigger Helix workflow: %s",
             exc,
         )
+        return False, f"Network error: {exc}"
 
-        return False
+
+def _trigger_helix() -> bool:
+    """Legacy boolean wrapper for callers that don't care about the reason."""
+    ok, _ = _trigger_helix_verbose()
+    return ok
 
 
 # ---------------------------------------------------------------------
@@ -560,16 +567,15 @@ def api_refresh():
     Fire the Helix GitHub Actions workflow immediately so the dashboard
     picks up a fresh tick without waiting for the next scheduled cron.
     """
-    triggered = _trigger_helix()
+    ok, error = _trigger_helix_verbose()
 
-    if not triggered:
+    if not ok:
         return jsonify(
             {
                 "ok": False,
                 "error": (
-                    "Could not trigger the Helix workflow — "
-                    "check that GITHUB_TOKEN is set with "
-                    "workflow:write permission."
+                    "Could not trigger the Helix workflow. "
+                    "GitHub said: " + (error or "unknown error")
                 ),
             }
         ), 500
