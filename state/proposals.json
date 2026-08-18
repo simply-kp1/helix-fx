@@ -89,6 +89,8 @@
     "proposed_at": "2026-08-18 15:26:24",
     "gtd_time": "2026-08-18T17:00:00.000000000Z",
     "daily_budget": 500.0,
-    "status": "approved"
+    "status": "placed",
+    "order_id": "195",
+    "placed_at": "2026-08-18 17:30:16"
   }
 ]
