@@ -113,7 +113,7 @@
     "proposed_at": "2026-08-19 07:32:05",
     "gtd_time": "2026-08-19T17:00:00.000000000Z",
     "daily_budget": 500.0,
-    "status": "pending"
+    "status": "expired"
   },
   {
     "id": "GBP_USD-long-2026-08-19",
@@ -135,7 +135,7 @@
     "proposed_at": "2026-08-19 07:32:06",
     "gtd_time": "2026-08-19T17:00:00.000000000Z",
     "daily_budget": 500.0,
-    "status": "pending"
+    "status": "expired"
   },
   {
     "id": "USD_JPY-short-2026-08-19",
@@ -157,6 +157,6 @@
     "proposed_at": "2026-08-19 07:32:07",
     "gtd_time": "2026-08-19T17:00:00.000000000Z",
     "daily_budget": 500.0,
-    "status": "pending"
+    "status": "expired"
   }
 ]

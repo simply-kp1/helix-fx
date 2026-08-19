@@ -11,7 +11,7 @@
     "short_placed": false,
     "long_proposed": true,
     "short_proposed": false,
-    "session_closed": false,
+    "session_closed": true,
     "active_order_ids": [],
     "last_orders": []
   },
@@ -27,7 +27,7 @@
     "short_placed": false,
     "long_proposed": true,
     "short_proposed": false,
-    "session_closed": false,
+    "session_closed": true,
     "active_order_ids": [],
     "last_orders": []
   },
@@ -43,7 +43,7 @@
     "short_placed": false,
     "long_proposed": false,
     "short_proposed": true,
-    "session_closed": false,
+    "session_closed": true,
     "active_order_ids": [],
     "last_orders": []
   }
