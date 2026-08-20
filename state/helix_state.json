@@ -46,5 +46,21 @@
     "session_closed": true,
     "active_order_ids": [],
     "last_orders": []
+  },
+  "DE30_EUR": {
+    "date": "2026-08-20",
+    "ib_high": null,
+    "ib_low": null,
+    "ib_ready": false,
+    "daily_atr": null,
+    "ema": null,
+    "trades_today": 0,
+    "long_placed": false,
+    "short_placed": false,
+    "long_proposed": false,
+    "short_proposed": false,
+    "session_closed": true,
+    "active_order_ids": [],
+    "last_orders": []
   }
 }
