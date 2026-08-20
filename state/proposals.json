@@ -158,5 +158,27 @@
     "gtd_time": "2026-08-19T17:00:00.000000000Z",
     "daily_budget": 500.0,
     "status": "expired"
+  },
+  {
+    "id": "USD_JPY-short-2026-08-20",
+    "instrument": "USD_JPY",
+    "direction": "short",
+    "entry": 158.534,
+    "stop_loss": 158.7970284589648,
+    "take_profit": 158.13945731155277,
+    "risk": 0.2630284589648113,
+    "rr": 1.5,
+    "units": 19,
+    "signed_units": -19,
+    "position_usd": 19.0,
+    "reward_usd": 0.05,
+    "risk_usd": 0.03,
+    "ema": 158.87299626149684,
+    "ib_high": 158.73,
+    "ib_low": 158.534,
+    "proposed_at": "2026-08-20 07:34:21",
+    "gtd_time": "2026-08-20T17:00:00.000000000Z",
+    "daily_budget": 500.0,
+    "status": "pending"
   }
 ]
