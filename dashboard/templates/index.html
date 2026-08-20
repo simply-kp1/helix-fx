@@ -217,7 +217,7 @@
     }
 
     /* ── Instrument cards grid ────────────────────────────────────── */
-    .grid3 { display: grid; grid-template-columns: repeat(3,1fr); gap: 14px; margin-bottom: 14px; }
+    .grid3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 14px; margin-bottom: 14px; }
 
     .inst-card { padding: 20px; position: relative; overflow: hidden; }
     .inst-card.sig-long  { border-color: rgba(16,217,138,.4);  box-shadow: var(--glow-grn), var(--shadow); }
@@ -568,15 +568,15 @@
     <div class="tl-wrap">
       <div class="tl-track" id="tl-track">
         <div class="tl-fill" id="tl-fill" style="width:0%"></div>
-        <!-- IB end marker at ~8.3% = (07-06)/(18-06) -->
-        <div class="tl-marker" style="left:8.33%"></div>
+        <!-- IB end marker at ~11.1% = (09-08)/(17-08) -->
+        <div class="tl-marker" style="left:11.1%"></div>
         <div class="tl-cursor" id="tl-cursor" style="left:0%"></div>
       </div>
       <div class="tl-labels">
-        <span>06:00 · IB OPEN</span>
-        <span>07:00 · IB CLOSE</span>
+        <span>08:00 · IB OPEN</span>
+        <span>09:00 · IB CLOSE</span>
         <span style="flex:1;text-align:center">TRADING WINDOW</span>
-        <span>18:00 · SESSION END</span>
+        <span>17:00 · SESSION END</span>
       </div>
     </div>
 
@@ -656,8 +656,8 @@
       <div class="card stat-card">
         <div class="card-head">Account &amp; Session</div>
         <div class="stat-row"><span class="stat-lbl">Balance</span><span class="stat-val" id="acc-bal">—</span></div>
-        <div class="stat-row"><span class="stat-lbl">IB Formation</span><span class="stat-val">06:00 – 07:00</span></div>
-        <div class="stat-row"><span class="stat-lbl">Trading Window</span><span class="stat-val">07:00 – 18:00</span></div>
+        <div class="stat-row"><span class="stat-lbl">IB Formation</span><span class="stat-val">08:00 – 09:00</span></div>
+        <div class="stat-row"><span class="stat-lbl">Trading Window</span><span class="stat-val">09:00 – 17:00</span></div>
         <div class="stat-row"><span class="stat-lbl">Timezone</span><span class="stat-val">Europe / London</span></div>
         <div class="stat-row"><span class="stat-lbl">Account Type</span><span class="stat-val" id="acc-mode">PRACTICE</span></div>
         <div class="stat-row"><span class="stat-lbl">Last Tick</span><span class="stat-val" id="last-tick">—</span></div>
@@ -678,9 +678,9 @@
 
 <script>
 /* ── Constants ───────────────────────────────────────────────────────── */
-const INSTRUMENTS = ['EUR_USD','GBP_USD','USD_JPY'];
-const DISPLAY     = { EUR_USD:'EUR/USD', GBP_USD:'GBP/USD', USD_JPY:'USD/JPY' };
-const DECIMALS    = { EUR_USD:5, GBP_USD:5, USD_JPY:3 };
+const INSTRUMENTS = ['DE30_EUR'];
+const DISPLAY     = { DE30_EUR:'DAX 40 (DE30)' };
+const DECIMALS    = { DE30_EUR:1 };
 
 /* ── Build instrument card DOM ───────────────────────────────────────── */
 function buildCards() {
@@ -728,24 +728,24 @@ function updateClock() {
   document.getElementById('uk-clock').textContent =
     `${pad(ld.getHours())}:${pad(ld.getMinutes())}:${pad(ld.getSeconds())}`;
 
-  // Timeline: session runs 06:00–18:00 = 720 minutes
+  // Timeline: DAX session runs 08:00–17:00 London = 540 minutes
   const mins = ld.getHours() * 60 + ld.getMinutes() + ld.getSeconds() / 60;
-  const start = 360, end = 1080; // 06:00, 18:00
+  const start = 480, end = 1020; // 08:00, 17:00
   const pct   = Math.min(100, Math.max(0, (mins - start) / (end - start) * 100));
   document.getElementById('tl-fill').style.width   = pct + '%';
   document.getElementById('tl-cursor').style.left  = pct + '%';
 
   // Countdown
   const totalSec = ld.getHours() * 3600 + ld.getMinutes() * 60 + ld.getSeconds();
-  const endSec   = 18 * 3600;
+  const endSec   = 17 * 3600;
   let diff = endSec - totalSec;
   let phase = 'TRADING WINDOW';
 
-  if (totalSec < 6 * 3600) {
-    diff  = 6 * 3600 - totalSec;
+  if (totalSec < 8 * 3600) {
+    diff  = 8 * 3600 - totalSec;
     phase = 'PRE-SESSION';
-  } else if (totalSec < 7 * 3600) {
-    diff  = 7 * 3600 - totalSec;
+  } else if (totalSec < 9 * 3600) {
+    diff  = 9 * 3600 - totalSec;
     phase = 'IB FORMING...';
   } else if (diff <= 0) {
     diff  = 0;

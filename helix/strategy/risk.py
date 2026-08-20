@@ -104,10 +104,22 @@ def calculate_position_size(
     """
     Returns OANDA units (positive=long, negative=short).
 
-    Simplified pip-value calculation:
-      - For XXX/USD pairs: pip_value = 0.0001 per unit
-      - For USD/JPY:       pip_value = 0.01 / current_price per unit
-    Assumes USD-denominated account.
+    Sizing so that a stop-loss hit ≈ ``risk_percent`` % of ``account_balance``:
+
+      * FX XXX/USD pairs (EUR/USD, GBP/USD, AUD/USD, NZD/USD):
+            units = risk_amount / stop_distance
+      * FX USD/XXX pairs (USD/JPY, USD/CHF, USD/CAD):
+            same formula; JPY-quoted sizing is slightly off because pip-value
+            depends on price, but the pre-existing agent has always used
+            this simplified form — kept for parity.
+      * CFD indices quoted in a non-USD currency (DE30_EUR, EU50_EUR,
+        UK100_GBP, JP225_JPY, ...):
+            1 unit ≈ 1 quote-currency per point of movement, so
+            units = risk_amount / stop_distance still works IF
+            ``account_balance`` is expressed in the SAME currency as the
+            quote (or you accept the small FX-conversion drift). For a
+            USD account trading DE30_EUR, actual USD risk will differ
+            from risk_percent by the EUR/USD rate.
     """
     risk_amount = account_balance * (risk_percent / 100.0)
     stop_distance = abs(entry - stop_loss)
@@ -115,7 +127,6 @@ def calculate_position_size(
     if stop_distance == 0:
         return 0
 
-    # Units = risk_amount / stop_distance  (works directly for USD-quoted pairs)
     units = int(risk_amount / stop_distance)
     units = max(units, 1)
 

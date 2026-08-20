@@ -501,7 +501,7 @@ class HelixAgent:
         # Session safety
         # --------------------------------------------------------------
 
-        if is_session_end(now):
+        if is_session_end(now, self.config.session_end_hour):
 
             for proposal in approved:
 
@@ -855,7 +855,7 @@ class HelixAgent:
 
         logger.info(
             "  Session:     "
-            "06:00-18:00 UK time"
+            f"{self.config.ib_start_hour:02d}:00-{self.config.session_end_hour:02d}:00 UK time"
         )
 
         logger.info(
@@ -985,7 +985,7 @@ class HelixAgent:
         # Session end
         # --------------------------------------------------------------
 
-        if is_session_end(now):
+        if is_session_end(now, self.config.session_end_hour):
 
             if not state.session_closed:
 
@@ -1085,7 +1085,8 @@ class HelixAgent:
         )
 
         ib = calculate_initial_balance(
-            candles_m30
+            candles_m30,
+            ib_start_hour=self.config.ib_start_hour,
         )
 
         if not ib:
@@ -1401,7 +1402,7 @@ class HelixAgent:
                 )
             ),
             "gtd_time": (
-                session_end_utc_str(now)
+                session_end_utc_str(now, self.config.session_end_hour)
             ),
             "daily_budget": (
                 float(budget)

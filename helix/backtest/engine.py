@@ -22,24 +22,36 @@ SESSION_END_HOUR = 18
 
 # ─── Realistic market frictions ──────────────────────────────────────────
 # One pip = 0.0001 for most pairs, 0.01 for JPY-quoted pairs.
+# For index CFDs the tick size is 1 whole point.
 PIP_SIZE = {
     "EUR_USD": 0.0001, "GBP_USD": 0.0001, "AUD_USD": 0.0001,
     "NZD_USD": 0.0001, "USD_CAD": 0.0001, "USD_CHF": 0.0001,
     "USD_JPY": 0.01,
+    "DE30_EUR": 1.0,   # DAX 40 CFD — quoted in EUR per point
+    "EU50_EUR": 1.0,   # Euro Stoxx 50
+    "UK100_GBP": 1.0,  # FTSE 100
+    "US30_USD": 1.0, "NAS100_USD": 1.0, "SPX500_USD": 0.1,
 }
 
-# Typical OANDA practice-account average spreads (pips). Real live spreads
-# are similar during major sessions; wider overnight and on news.
+# Typical OANDA practice-account average spreads (points/pips).
+# Index spreads shown in whole points (e.g. DAX ≈ 1.5 pt during Xetra).
 SPREAD_PIPS = {
     "EUR_USD": 1.0, "GBP_USD": 1.5, "USD_JPY": 1.0,
     "AUD_USD": 1.4, "USD_CAD": 1.6, "USD_CHF": 1.6, "NZD_USD": 2.0,
+    "DE30_EUR": 1.5, "EU50_EUR": 2.0, "UK100_GBP": 1.5,
+    "US30_USD": 2.0, "NAS100_USD": 1.5, "SPX500_USD": 5.0,
 }
 
 # Extra slippage on stop-order fills (breakouts move fast).
 SLIPPAGE_PIPS = {
     "EUR_USD": 0.5, "GBP_USD": 0.7, "USD_JPY": 0.5,
     "AUD_USD": 0.5, "USD_CAD": 0.5, "USD_CHF": 0.5, "NZD_USD": 0.7,
+    "DE30_EUR": 1.5, "EU50_EUR": 1.5, "UK100_GBP": 1.0,
+    "US30_USD": 2.0, "NAS100_USD": 1.5, "SPX500_USD": 3.0,
 }
+
+# Which instruments are index CFDs (as opposed to FX pairs).
+INDEX_CFDS = {"DE30_EUR", "EU50_EUR", "UK100_GBP", "US30_USD", "NAS100_USD", "SPX500_USD"}
 
 
 def _pip(instrument: str) -> float:
@@ -59,28 +71,41 @@ def _parse_time(s: str) -> datetime:
 
 
 def _pip_pnl_usd(instrument: str, units: int, entry: float, exit_price: float, direction: str) -> float:
-    """USD profit/loss for a position sized in `units` of the base currency."""
+    """USD profit/loss for a position sized in `units` of the base currency.
+
+    Index CFDs are quoted in their local currency (EUR for DE30_EUR etc).
+    We report the raw quote-currency PnL as "USD" — this backtest keeps a
+    single account-currency abstraction; for accurate absolute USD figures
+    on non-USD index CFDs, multiply the reported PnL by the currency's
+    average USD rate over the period.
+    """
     diff = (exit_price - entry) if direction == "long" else (entry - exit_price)
+    if instrument in INDEX_CFDS:
+        # 1 unit ≈ 1 quote-currency per point of movement.
+        return units * diff
     if instrument.startswith("USD_"):
-        # base currency is USD; pnl in quote currency → convert with exit price
+        # FX USD-base pair: base currency is USD; PnL in quote → convert with exit price.
         return units * diff / exit_price
-    # quote currency is USD (e.g. EUR_USD)
+    # FX XXX/USD pair
     return units * diff
 
 
 def _position_size(
     entry: float, stop_loss: float, balance: float, risk_pct: float, instrument: str
 ) -> int:
-    """Compute units so that hitting SL loses ~risk_pct% of balance in USD."""
-    risk_usd = balance * (risk_pct / 100.0)
+    """Compute units so that hitting SL loses ~risk_pct% of balance."""
+    risk_amount = balance * (risk_pct / 100.0)
     stop_dist = abs(entry - stop_loss)
     if stop_dist == 0:
         return 0
-    if instrument.startswith("USD_"):
-        # loss in USD = units * stop_dist / entry  →  units = risk_usd * entry / stop_dist
-        units = int(risk_usd * entry / stop_dist)
+    if instrument in INDEX_CFDS:
+        # loss = units * stop_dist (in quote currency) → units = risk_amount / stop_dist
+        units = int(risk_amount / stop_dist)
+    elif instrument.startswith("USD_"):
+        # loss in USD = units * stop_dist / entry  →  units = risk_amount * entry / stop_dist
+        units = int(risk_amount * entry / stop_dist)
     else:
-        units = int(risk_usd / stop_dist)
+        units = int(risk_amount / stop_dist)
     return max(units, 1)
 
 
@@ -115,6 +140,9 @@ def run_backtest(
     min_rr: float = 1.5,
     max_trades_per_day: int = 3,
     frictions: bool = True,
+    ib_start_hour: int = IB_START_HOUR,
+    ib_end_hour: int = IB_END_HOUR,
+    session_end_hour: int = SESSION_END_HOUR,
     progress_cb: Optional[Callable[[str, float], None]] = None,
 ) -> Dict:
     """Run the backtest across the given instruments over the past `years` years."""
@@ -176,7 +204,7 @@ def run_backtest(
                 continue
 
             # IB from 06:00 & 06:30 London candles
-            ib = calculate_initial_balance(day_candles)
+            ib = calculate_initial_balance(day_candles, ib_start_hour=ib_start_hour)
             if not ib:
                 continue
 
@@ -187,8 +215,8 @@ def run_backtest(
             # Trading window candles (07:00 → 17:30 London close)
             window = [
                 c for c in day_candles
-                if _parse_time(c["time"]).astimezone(LONDON).time() >= time(IB_END_HOUR, 0)
-                and _parse_time(c["time"]).astimezone(LONDON).time() < time(SESSION_END_HOUR, 0)
+                if _parse_time(c["time"]).astimezone(LONDON).time() >= time(ib_end_hour, 0)
+                and _parse_time(c["time"]).astimezone(LONDON).time() < time(session_end_hour, 0)
             ]
 
             # Continuation candles for tracking active trades past session close

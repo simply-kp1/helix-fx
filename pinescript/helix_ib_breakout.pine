@@ -24,19 +24,19 @@
 // ═══════════════════════════════════════════════════════════════════════
 
 //@version=5
-strategy("HELIX FX — IB Breakout",
+strategy("HELIX — IB Breakout (DAX / FX)",
      shorttitle          = "HELIX-IB",
      overlay             = true,
      initial_capital     = 10000,
      default_qty_type    = strategy.fixed,
      default_qty_value   = 1,
-     currency            = currency.USD,
+     currency            = currency.NONE,   // report PnL in the symbol's own currency
      pyramiding          = 0,
      calc_on_every_tick  = false,
      process_orders_on_close = true,
-     commission_type     = strategy.commission.cash_per_contract,
-     commission_value    = 0.00007,   // ~0.7 pip average round-trip cost
-     slippage            = 1)          // 1 tick default slippage
+     commission_type     = strategy.commission.percent,
+     commission_value    = 0.005,           // ~0.005% ≈ typical CFD/FX round-trip cost
+     slippage            = 1)                // 1 tick default slippage
 
 // ─────────── Inputs ─────────────────────────────────────────────────────
 grp_strat = "Strategy"
@@ -50,9 +50,12 @@ grp_risk = "Risk"
 riskPct       = input.float (1.0,  "Risk % of Equity per Trade", step = 0.1, minval = 0.1, maxval = 10.0, group = grp_risk)
 
 grp_sess = "Session (London Time)"
-ibStartHour   = input.int   (6,    "IB Start Hour",   minval = 0, maxval = 23, group = grp_sess)
-ibEndHour     = input.int   (7,    "IB End Hour",     minval = 0, maxval = 23, group = grp_sess)
-sessionEndH   = input.int   (18,   "Session End Hour", minval = 0, maxval = 23, group = grp_sess)
+// Defaults for the DAX / Xetra opening range (09:00-10:00 CET = 08:00-09:00
+// London year-round). Change to 6/7/18 to run the original FX London-open
+// version of the strategy.
+ibStartHour   = input.int   (8,    "IB Start Hour",   minval = 0, maxval = 23, group = grp_sess)
+ibEndHour     = input.int   (9,    "IB End Hour",     minval = 0, maxval = 23, group = grp_sess)
+sessionEndH   = input.int   (17,   "Session End Hour", minval = 0, maxval = 23, group = grp_sess)
 tz            = input.string("Europe/London", "Session Timezone", group = grp_sess)
 
 grp_viz = "Visuals"
