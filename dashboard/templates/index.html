@@ -198,10 +198,20 @@
       background: var(--bg2); border: 2.5px solid var(--cyan);
       box-shadow: var(--glow-cyan); transition: left 1s linear;
     }
+    /* Labels are absolutely positioned on their real time marks (not
+       flex-distributed) so IB open/close stay next to their markers even
+       when the IB is a small fraction of the trading day. */
     .tl-labels {
-      display: flex; justify-content: space-between;
+      position: relative; height: 12px;
       font-family: 'Orbitron', sans-serif; font-size: 8.5px; color: var(--muted); letter-spacing: 1px;
     }
+    .tl-labels .tl-lbl {
+      position: absolute; top: 0;
+      transform: translateX(-50%);
+      white-space: nowrap;
+    }
+    .tl-labels .tl-lbl.tl-lbl-first { transform: translateX(0); }
+    .tl-labels .tl-lbl.tl-lbl-last  { transform: translateX(-100%); }
     .tl-marker {
       position: absolute; top: 50%; transform: translateX(-50%) translateY(-50%);
       width: 3px; height: 18px; border-radius: 2px; background: rgba(192,192,192,0.2);
@@ -573,10 +583,10 @@
         <div class="tl-cursor" id="tl-cursor" style="left:0%"></div>
       </div>
       <div class="tl-labels">
-        <span>08:00 · IB OPEN</span>
-        <span>09:00 · IB CLOSE</span>
-        <span style="flex:1;text-align:center">TRADING WINDOW</span>
-        <span>17:00 · SESSION END</span>
+        <span class="tl-lbl tl-lbl-first" style="left:0%">08:00 · IB OPEN</span>
+        <span class="tl-lbl"              style="left:11.1%">09:00 · IB CLOSE</span>
+        <span class="tl-lbl"              style="left:55%">TRADING WINDOW</span>
+        <span class="tl-lbl tl-lbl-last"  style="left:100%">17:00 · SESSION END</span>
       </div>
     </div>
 
