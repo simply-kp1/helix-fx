@@ -2,7 +2,7 @@
   "trading_enabled": true,
   "daily_budget": 500.0,
   "account_balance": 99768.1637,
-  "last_tick": "19:27:11",
+  "last_tick": "20:06:37",
   "max_trades": 3,
   "risk_percent": 1.0,
   "pnl_days": [
@@ -25,9 +25,9 @@
     {
       "date": "2026-08-19",
       "label": "WED 19 AUG",
-      "pnl": 0.0,
-      "trades": 0,
-      "wins": 0,
+      "pnl": 4.15,
+      "trades": 2,
+      "wins": 2,
       "losses": 0
     }
   ]
