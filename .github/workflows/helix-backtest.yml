@@ -1,0 +1,70 @@
+name: Helix Backtest
+
+on:
+  workflow_dispatch:
+    inputs:
+      years:
+        description: "Years of history"
+        required: false
+        default: "5"
+      starting_balance:
+        description: "Starting balance ($)"
+        required: false
+        default: "10000"
+      risk_pct:
+        description: "Risk % per trade"
+        required: false
+        default: "1.0"
+      frictions:
+        description: "Include spread + gaps (true/false)"
+        required: false
+        default: "true"
+
+permissions:
+  contents: write
+
+jobs:
+  backtest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run backtest
+        env:
+          OANDA_ACCOUNT_ID: ${{ secrets.OANDA_ACCOUNT_ID }}
+          OANDA_API_KEY: ${{ secrets.OANDA_API_KEY }}
+          OANDA_ENVIRONMENT: practice
+        run: |
+          python run_backtest_cli.py \
+            --years "${{ github.event.inputs.years }}" \
+            --starting-balance "${{ github.event.inputs.starting_balance }}" \
+            --risk-pct "${{ github.event.inputs.risk_pct }}" \
+            --frictions "${{ github.event.inputs.frictions }}"
+
+      - name: Save backtest results to GitHub
+        if: always()
+        run: |
+          git config user.name "helix-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add state/backtest_results.json
+
+          if git diff --cached --quiet; then
+            echo "No results to commit"
+            exit 0
+          fi
+
+          git commit -m "Update backtest results"
+          git pull --rebase origin main
+          git push origin main

@@ -10,8 +10,6 @@ from flask import Flask, Response, jsonify, render_template, request
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from helix.backtest import runner as backtest_runner
-
 
 app = Flask(__name__)
 
@@ -810,97 +808,106 @@ def backtest_page():
     )
 
 
+BACKTEST_WORKFLOW_FILE = "helix-backtest.yml"
+
+
+def _trigger_backtest_workflow(years: int, starting_balance: float,
+                               risk_pct: float, frictions: bool):
+    """Trigger the helix-backtest GitHub Actions workflow with the given parameters."""
+    if not GITHUB_TOKEN:
+        return False, "GITHUB_TOKEN env var is not set on this deployment."
+
+    url = (
+        f"{GITHUB_API}/repos/{GITHUB_REPO}/actions/workflows/"
+        f"{BACKTEST_WORKFLOW_FILE}/dispatches"
+    )
+    try:
+        response = requests.post(
+            url,
+            headers=_github_headers(),
+            json={
+                "ref": GITHUB_BRANCH,
+                "inputs": {
+                    "years": str(years),
+                    "starting_balance": str(starting_balance),
+                    "risk_pct": str(risk_pct),
+                    "frictions": "true" if frictions else "false",
+                },
+            },
+            timeout=15,
+        )
+        if response.status_code == 204:
+            return True, None
+        return False, f"HTTP {response.status_code}: {response.text[:400]}"
+    except Exception as exc:
+        return False, f"Network error: {exc}"
+
+
+def _get_backtest_workflow_status():
+    """Return a status dict compatible with the backtest.html polling format."""
+    if not GITHUB_TOKEN:
+        return {"status": "idle", "progress_pct": 0, "message": ""}
+
+    url = (
+        f"{GITHUB_API}/repos/{GITHUB_REPO}/actions/workflows/"
+        f"{BACKTEST_WORKFLOW_FILE}/runs?per_page=1"
+    )
+    try:
+        resp = requests.get(url, headers=_github_headers(), timeout=10)
+        runs = resp.json().get("workflow_runs", [])
+        if not runs:
+            return {"status": "idle", "progress_pct": 0, "message": ""}
+
+        run = runs[0]
+        gh_status = run.get("status")       # queued | in_progress | completed
+        conclusion = run.get("conclusion")  # success | failure | cancelled | None
+
+        if gh_status in ("queued",):
+            return {"status": "running", "progress_pct": 5, "message": "Queued…"}
+        if gh_status == "in_progress":
+            return {"status": "running", "progress_pct": 50, "message": "Fetching data & running simulation…"}
+        if gh_status == "completed":
+            if conclusion == "success":
+                return {"status": "done", "progress_pct": 100, "message": "Complete"}
+            return {
+                "status": "error",
+                "progress_pct": 0,
+                "message": f"Workflow {conclusion}",
+                "error": f"GitHub Actions run concluded: {conclusion}",
+            }
+        return {"status": "idle", "progress_pct": 0, "message": ""}
+    except Exception as exc:
+        return {"status": "idle", "progress_pct": 0, "message": str(exc)}
+
+
 @app.route(
     "/api/backtest/run",
     methods=["POST"],
 )
 def api_backtest_run():
-    body = (
-        request.get_json(
-            silent=True
-        )
-        or {}
-    )
+    body = request.get_json(silent=True) or {}
 
-    instruments = (
-        body.get("instruments")
-        or ["DE30_EUR"]
-    )
+    years = int(body.get("years", 5))
+    starting_balance = float(body.get("starting_balance", 10000))
+    risk_pct = float(body.get("risk_pct", 1.0))
+    frictions = bool(body.get("frictions", True))
 
-    years = int(
-        body.get(
-            "years",
-            5,
-        )
-    )
-
-    starting_balance = float(
-        body.get(
-            "starting_balance",
-            10000,
-        )
-    )
-
-    risk_pct = float(
-        body.get(
-            "risk_pct",
-            1.0,
-        )
-    )
-
-    frictions = bool(
-        body.get(
-            "frictions",
-            True,
-        )
-    )
-
-    result = (
-        backtest_runner.start_backtest(
-            instruments=instruments,
-            years=years,
-            starting_balance=starting_balance,
-            risk_pct=risk_pct,
-            frictions=frictions,
-        )
-    )
-
-    return jsonify(
-        result
-    ), (
-        200
-        if result.get("ok")
-        else 400
-    )
+    ok, error = _trigger_backtest_workflow(years, starting_balance, risk_pct, frictions)
+    if not ok:
+        return jsonify({"ok": False, "error": error}), 400
+    return jsonify({"ok": True})
 
 
-@app.route(
-    "/api/backtest/status"
-)
+@app.route("/api/backtest/status")
 def api_backtest_status():
-    return jsonify(
-        backtest_runner.get_state()
-    )
+    return jsonify(_get_backtest_workflow_status())
 
 
-@app.route(
-    "/api/backtest/results"
-)
+@app.route("/api/backtest/results")
 def api_backtest_results():
-    results = (
-        backtest_runner.load_last_results()
-    )
-
+    results = _read_json("state/backtest_results.json", None)
     if results is None:
-        return jsonify(
-            {
-                "ok": False,
-                "error": (
-                    "No results yet"
-                ),
-            }
-        ), 404
-
+        return jsonify({"ok": False, "error": "No results yet"}), 404
     return jsonify(results)
 
 

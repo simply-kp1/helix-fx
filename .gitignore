@@ -6,12 +6,11 @@
 *.key
 credentials.json
 
-# ─── Runtime state (lives on Fly volume / local disk only) ──────────
+# ─── Runtime state (local only) ────────────────────────────────────
 logs/
 backtest_cache/
 trades.csv
 *.log
-backtest_results.json
 
 # ─── Python ─────────────────────────────────────────────────────────
 __pycache__/
