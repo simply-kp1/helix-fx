@@ -824,11 +824,7 @@ def api_backtest_run():
 
     instruments = (
         body.get("instruments")
-        or [
-            "EUR_USD",
-            "GBP_USD",
-            "USD_JPY",
-        ]
+        or ["DE30_EUR"]
     )
 
     years = int(

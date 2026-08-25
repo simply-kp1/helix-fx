@@ -229,7 +229,7 @@
       <div class="empty-icon">◇</div>
       <div class="empty-text">NO BACKTEST RESULTS YET</div>
       <div class="empty-sub">
-        Click <b>Run Backtest</b> above to replay the past 5 years of EUR/USD, GBP/USD, and USD/JPY M30 candles through the live strategy.
+        Click <b>RUN BACKTEST</b> above to begin.
         </div>
     </div>
   </div>
@@ -237,8 +237,8 @@
 </div>
 
 <script>
-const INSTRUMENTS = ['EUR_USD','GBP_USD','USD_JPY'];
-const DISPLAY = { EUR_USD:'EUR/USD', GBP_USD:'GBP/USD', USD_JPY:'USD/JPY' };
+const INSTRUMENTS = ['DE30_EUR'];
+const DISPLAY = { DE30_EUR:'DAX 40 (DE30)' };
 let equityChart = null;
 let _lastRenderedAt = null;
 let _lastStatusRendered = null;

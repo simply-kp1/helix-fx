@@ -16,9 +16,9 @@ logger = logging.getLogger(__name__)
 LONDON = pytz.timezone("Europe/London")
 UTC = pytz.utc
 
-IB_START_HOUR = 6
-IB_END_HOUR = 7
-SESSION_END_HOUR = 18
+IB_START_HOUR = 8   # Xetra open 09:00 CET = 08:00 London
+IB_END_HOUR = 9
+SESSION_END_HOUR = 17
 
 # ─── Realistic market frictions ──────────────────────────────────────────
 # One pip = 0.0001 for most pairs, 0.01 for JPY-quoted pairs.
