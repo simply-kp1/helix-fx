@@ -83,11 +83,11 @@ class OandaClient:
         orders = req.response.get("orders", [])
         return [o for o in orders if o.get("instrument") == instrument]
 
-    def get_closed_trades(self, count: int = 500) -> List[Dict]:
+    def get_closed_trades(self, count: int = 500, instrument: str = "DE30_EUR") -> List[Dict]:
         """Return closed trades with opening_order_id and realized_pl for CSV matching."""
         from oandapyV20.endpoints.trades import TradesList
 
-        params = {"state": "CLOSED", "count": str(count)}
+        params = {"state": "CLOSED", "count": str(count), "instrument": instrument}
         req = TradesList(accountID=self.account_id, params=params)
         self.api.request(req)
         result = []
@@ -100,7 +100,7 @@ class OandaClient:
             })
         return result
 
-    def get_pnl_by_day(self, days: int = 3) -> List[Dict]:
+    def get_pnl_by_day(self, days: int = 3, instrument: str = "DE30_EUR") -> List[Dict]:
         """Return daily P&L summary for the last `days` calendar days (London time)."""
         import pytz
         from collections import defaultdict
@@ -109,7 +109,7 @@ class OandaClient:
         london = pytz.timezone("Europe/London")
         today = datetime.now(london).date()
 
-        params = {"state": "CLOSED", "count": "500"}
+        params = {"state": "CLOSED", "count": "500", "instrument": instrument}
         req = TradesList(accountID=self.account_id, params=params)
         self.api.request(req)
         trades = req.response.get("trades", [])
