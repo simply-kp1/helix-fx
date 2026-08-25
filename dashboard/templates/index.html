@@ -875,16 +875,27 @@ function applyState(data) {
           </tr>
         </thead>
         <tbody>
-          ${orders.map(o => `
+          ${orders.map(o => {
+            const dec = DECIMALS[o.instrument] || 5;
+            const fmtPx = v => (v === undefined || v === null || v === '—') ? '—' : parseFloat(v).toFixed(dec);
+            const isRejected = ['failed','stale','expired'].includes(o.status);
+            const statusBadge = isRejected
+              ? `<span class="status-tag" style="background:rgba(251,113,133,0.15);color:#FB7185;border:1px solid #FB7185;">✗ REJECTED</span>`
+              : `<span class="status-tag">⏳ PENDING</span>`;
+            const errorRow = isRejected && o.error
+              ? `<tr style="background:transparent;border:none;"><td colspan="7" style="padding:2px 8px 8px;font-size:10px;color:#FB7185;letter-spacing:.5px;font-family:Orbitron,sans-serif;">${o.error}</td></tr>`
+              : '';
+            return `
             <tr>
               <td><span class="mono" style="font-size:12px;font-weight:700;">${o.instrument.replace('_','/')}</span></td>
               <td><span class="dir-tag ${o.direction==='long'?'dir-long':'dir-short'}">${o.direction==='long'?'▲ LONG':'▼ SHORT'}</span></td>
-              <td class="mono" style="font-size:12px;">${o.entry}</td>
-              <td class="mono" style="font-size:12px;color:#FB7185;">${o.stop_loss}</td>
-              <td class="mono" style="font-size:12px;color:#34D399;">${o.take_profit}</td>
-              <td class="mono" style="font-size:12px;">${o.units?.toLocaleString() ?? '—'}</td>
-              <td><span class="status-tag">⏳ PENDING</span></td>
-            </tr>`).join('')}
+              <td class="mono" style="font-size:12px;${isRejected?'opacity:.5;':''}">${fmtPx(o.entry)}</td>
+              <td class="mono" style="font-size:12px;color:#FB7185;${isRejected?'opacity:.5;':''}">${fmtPx(o.stop_loss)}</td>
+              <td class="mono" style="font-size:12px;color:#34D399;${isRejected?'opacity:.5;':''}">${fmtPx(o.take_profit)}</td>
+              <td class="mono" style="font-size:12px;${isRejected?'opacity:.5;':''}">${o.units?.toLocaleString() ?? '—'}</td>
+              <td>${statusBadge}</td>
+            </tr>${errorRow}`;
+          }).join('')}
         </tbody>
       </table>`;
   }

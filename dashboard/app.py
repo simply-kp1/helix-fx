@@ -3,7 +3,10 @@ import json
 import os
 import sys
 import time
+from datetime import datetime
 from typing import Any, Dict, List, Optional
+
+import pytz
 
 import requests
 from flask import Flask, Response, jsonify, render_template, request
@@ -455,6 +458,27 @@ def _build_dashboard_state() -> Dict:
             [],
         ):
             orders.append(order)
+
+    # Include today's failed / stale proposals as rejected orders
+    # so the user can see what happened after approving a trade.
+    london_tz = pytz.timezone("Europe/London")
+    today_str = datetime.now(london_tz).strftime("%Y-%m-%d")
+    for p in proposals:
+        if p.get("status") not in ("failed", "stale", "expired"):
+            continue
+        if not str(p.get("proposed_at", "")).startswith(today_str):
+            continue
+        orders.append({
+            "id": p.get("id", ""),
+            "instrument": p.get("instrument", ""),
+            "direction": p.get("direction", ""),
+            "entry": p.get("entry", "—"),
+            "stop_loss": p.get("stop_loss", "—"),
+            "take_profit": p.get("take_profit", "—"),
+            "units": p.get("units", 0),
+            "status": p.get("status", "failed"),
+            "error": p.get("error", ""),
+        })
 
     return {
         "mode": "practice",

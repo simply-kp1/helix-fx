@@ -10,7 +10,7 @@ import schedule
 
 from .config import Config
 from .data.oanda_client import OandaClient, MockOandaClient
-from .execution.order_manager import OrderManager
+from .execution.order_manager import OrderManager, PRICE_DECIMALS as _PRICE_DECIMALS
 from .execution.trade_manager import TradeManager
 from .strategy.ema_filter import calculate_ema, check_ema_filter
 from .strategy.initial_balance import calculate_initial_balance
@@ -29,6 +29,11 @@ from .utils.trade_log import log_trade, update_trade_outcomes
 
 
 logger = logging.getLogger(__name__)
+
+
+def _price_fmt(instrument: str, price: float) -> str:
+    decimals = _PRICE_DECIMALS.get(instrument, 5)
+    return f"{price:.{decimals}f}"
 
 
 @dataclass
@@ -662,6 +667,48 @@ class HelixAgent:
                 continue
 
             # ----------------------------------------------------------
+            # Staleness check: verify market hasn't moved past entry
+            # ----------------------------------------------------------
+
+            try:
+                candles = self.client.get_candles(
+                    instrument, granularity="M30", count=2
+                )
+                complete = [c for c in candles if c.get("complete", True)]
+                if complete:
+                    current_price = float(complete[-1]["mid"]["c"])
+                    entry_price = float(proposal["entry"])
+                    dec = _PRICE_DECIMALS.get(instrument, 5)
+                    if direction == "long" and current_price >= entry_price:
+                        proposal["status"] = "stale"
+                        proposal["error"] = (
+                            f"Market ({current_price:.{dec}f}) already at or above "
+                            f"entry ({entry_price:.{dec}f}) — buy stop would be rejected"
+                        )
+                        logger.warning(
+                            f"[{instrument}] Skipping stale LONG: "
+                            f"market {current_price:.{dec}f} >= entry {entry_price:.{dec}f}"
+                        )
+                        changed = True
+                        continue
+                    elif direction == "short" and current_price <= entry_price:
+                        proposal["status"] = "stale"
+                        proposal["error"] = (
+                            f"Market ({current_price:.{dec}f}) already at or below "
+                            f"entry ({entry_price:.{dec}f}) — sell stop would be rejected"
+                        )
+                        logger.warning(
+                            f"[{instrument}] Skipping stale SHORT: "
+                            f"market {current_price:.{dec}f} <= entry {entry_price:.{dec}f}"
+                        )
+                        changed = True
+                        continue
+            except Exception as exc:
+                logger.warning(
+                    f"[{instrument}] Staleness check failed: {exc} — proceeding"
+                )
+
+            # ----------------------------------------------------------
             # Place OANDA PRACTICE order
             # ----------------------------------------------------------
 
@@ -726,21 +773,11 @@ class HelixAgent:
                     "id": str(order_id),
                     "instrument": instrument,
                     "direction": direction,
-                    "entry": (
-                        f"{float(proposal['entry']):.5f}"
-                    ),
-                    "stop_loss": (
-                        f"{float(proposal['stop_loss']):.5f}"
-                    ),
-                    "take_profit": (
-                        f"{float(proposal['take_profit']):.5f}"
-                    ),
-                    "risk": (
-                        f"{float(proposal['risk']):.5f}"
-                    ),
-                    "units": int(
-                        proposal["units"]
-                    ),
+                    "entry": _price_fmt(instrument, float(proposal["entry"])),
+                    "stop_loss": _price_fmt(instrument, float(proposal["stop_loss"])),
+                    "take_profit": _price_fmt(instrument, float(proposal["take_profit"])),
+                    "risk": _price_fmt(instrument, float(proposal["risk"])),
+                    "units": int(proposal["units"]),
                     "status": "pending",
                 }
             )
@@ -1441,17 +1478,17 @@ class HelixAgent:
 
             state.short_proposed = True
 
+        _dec = _PRICE_DECIMALS.get(instrument, 5)
         logger.info(
             f"[{instrument}] "
             f"Trade PROPOSED - "
             f"{direction.upper()} | "
-            f"Entry={levels['entry']:.5f} "
-            f"SL="
-            f"{levels['stop_loss']:.5f} "
-            f"TP={levels['target']:.5f} "
+            f"Entry={levels['entry']:.{_dec}f} "
+            f"SL={levels['stop_loss']:.{_dec}f} "
+            f"TP={levels['target']:.{_dec}f} "
             f"Units={abs(units)} "
             f"R:R=1:{levels['rr']} "
-            f"EMA={state.ema:.5f} "
+            f"EMA={state.ema:.{_dec}f} "
             "- awaiting user approval"
         )
 

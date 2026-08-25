@@ -11,6 +11,7 @@ PRICE_DECIMALS = {
     "USD_CAD": 5,
     "USD_CHF": 5,
     "NZD_USD": 5,
+    "DE30_EUR": 1,  # DAX index — OANDA expects 1 decimal place
 }
 
 
@@ -43,9 +44,10 @@ class OrderManager:
                 take_profit=_fmt(instrument, take_profit),
                 gtd_time=gtd_time,
             )
+            dec = PRICE_DECIMALS.get(instrument, 5)
             logger.info(
                 f"[{instrument}] {direction.upper()} stop order placed "
-                f"id={order_id} entry={entry:.5f} sl={stop_loss:.5f} tp={take_profit:.5f}"
+                f"id={order_id} entry={entry:.{dec}f} sl={stop_loss:.{dec}f} tp={take_profit:.{dec}f}"
             )
             return order_id
         except Exception as e:
