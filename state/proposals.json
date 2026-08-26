@@ -292,5 +292,27 @@
     "daily_budget": 500.0,
     "status": "failed",
     "error": "OANDA rejected the order"
+  },
+  {
+    "id": "DE30_EUR-long-2026-08-26",
+    "instrument": "DE30_EUR",
+    "direction": "long",
+    "entry": 26289.2,
+    "stop_loss": 26161.83276868389,
+    "take_profit": 26480.250846974166,
+    "risk": 127.36723131611143,
+    "rr": 1.5,
+    "units": 1,
+    "signed_units": 1,
+    "position_usd": 26289.2,
+    "reward_usd": 191.05,
+    "risk_usd": 127.37,
+    "ema": 26211.829005514464,
+    "ib_high": 26289.2,
+    "ib_low": 26173.2,
+    "proposed_at": "2026-08-26 11:28:22",
+    "gtd_time": "2026-08-26T16:00:00.000000000Z",
+    "daily_budget": 500.0,
+    "status": "pending"
   }
 ]
