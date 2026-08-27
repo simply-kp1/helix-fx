@@ -1,8 +1,8 @@
 {
   "trading_enabled": true,
   "daily_budget": 500.0,
-  "account_balance": 99775.9895,
-  "last_tick": "15:14:22",
+  "account_balance": 99768.5888,
+  "last_tick": "17:02:20",
   "max_trades": 3,
   "risk_percent": 1.0,
   "pnl_days": [
