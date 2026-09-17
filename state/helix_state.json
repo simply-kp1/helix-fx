@@ -1,17 +1,17 @@
 {
   "DE30_EUR": {
-    "date": "2026-09-16",
-    "ib_high": 25525.5,
-    "ib_low": 25191.5,
+    "date": "2026-09-17",
+    "ib_high": 25752.0,
+    "ib_low": 25434.0,
     "ib_ready": true,
-    "daily_atr": 260.4672730564007,
-    "ema": 25460.03861922622,
+    "daily_atr": 267.82364164272536,
+    "ema": 25535.14443250437,
     "trades_today": 0,
     "long_placed": false,
     "short_placed": false,
     "long_proposed": false,
     "short_proposed": false,
-    "session_closed": true,
+    "session_closed": false,
     "active_order_ids": [],
     "last_orders": []
   }
