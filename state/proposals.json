@@ -512,5 +512,27 @@
     "gtd_time": "2026-09-22T16:00:00.000000000Z",
     "daily_budget": 500.0,
     "status": "expired"
+  },
+  {
+    "id": "DE30_EUR-short-2026-09-23",
+    "instrument": "DE30_EUR",
+    "direction": "short",
+    "entry": 25472.0,
+    "stop_loss": 25762.717573473983,
+    "take_profit": 25035.923639789027,
+    "risk": 290.71757347398307,
+    "rr": 1.5,
+    "units": 1,
+    "signed_units": -1,
+    "position_usd": 25472.0,
+    "reward_usd": 436.08,
+    "risk_usd": 290.72,
+    "ema": 25593.211498727203,
+    "ib_high": 25747.5,
+    "ib_low": 25472.0,
+    "proposed_at": "2026-09-23 15:35:39",
+    "gtd_time": "2026-09-23T16:00:00.000000000Z",
+    "daily_budget": 500.0,
+    "status": "pending"
   }
 ]
