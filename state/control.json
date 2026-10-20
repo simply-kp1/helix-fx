@@ -2,12 +2,12 @@
   "trading_enabled": true,
   "daily_budget": 500.0,
   "account_balance": 99773.4724,
-  "last_tick": "22:38:42",
+  "last_tick": "10:45:13",
   "max_trades": 3,
   "risk_percent": 1.0,
   "pnl_days": [
     {
-      "date": "2026-10-19",
+      "date": "2026-10-20",
       "label": "TODAY",
       "pnl": 0.0,
       "trades": 0,
@@ -15,7 +15,7 @@
       "losses": 0
     },
     {
-      "date": "2026-10-18",
+      "date": "2026-10-19",
       "label": "YESTERDAY",
       "pnl": 0.0,
       "trades": 0,
@@ -23,8 +23,8 @@
       "losses": 0
     },
     {
-      "date": "2026-10-17",
-      "label": "SAT 17 OCT",
+      "date": "2026-10-18",
+      "label": "SUN 18 OCT",
       "pnl": 0.0,
       "trades": 0,
       "wins": 0,
