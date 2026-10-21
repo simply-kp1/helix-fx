@@ -666,5 +666,27 @@
     "gtd_time": "2026-10-19T16:00:00.000000000Z",
     "daily_budget": 500.0,
     "status": "expired"
+  },
+  {
+    "id": "DE30_EUR-long-2026-10-21",
+    "instrument": "DE30_EUR",
+    "direction": "long",
+    "entry": 25356.8,
+    "stop_loss": 25062.723656117054,
+    "take_profit": 25797.914515824417,
+    "risk": 294.07634388294537,
+    "rr": 1.5,
+    "units": 1,
+    "signed_units": 1,
+    "position_usd": 25356.8,
+    "reward_usd": 441.11,
+    "risk_usd": 294.08,
+    "ema": 25347.971085444566,
+    "ib_high": 25356.8,
+    "ib_low": 25078.1,
+    "proposed_at": "2026-10-21 10:46:36",
+    "gtd_time": "2026-10-21T16:00:00.000000000Z",
+    "daily_budget": 500.0,
+    "status": "pending"
   }
 ]
